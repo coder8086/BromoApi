@@ -1,0 +1,407 @@
+<!doctype html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BROMO Admin — Ad Approval</title>
+  <style>
+    :root{--bg:#0e0f19;--card:#151826;--muted:#8c91a7;--text:#e8edf6;--ok:#15d18a;--warn:#ffd65a;--bad:#ff6c86;--brand:#7b86ff;--brand2:#00e6b1}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1100px 600px at 110% -10%,rgba(123,134,255,.09),transparent),radial-gradient(800px 400px at -20% 110%,rgba(0,230,177,.08),transparent),var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text)}
+    .container{max-width:1200px;margin:0 auto;padding:16px}
+    .nav{position:sticky;top:0;z-index:10;background:rgba(14,15,25,.7);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .brand .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{appearance:none;border:1px solid rgba(255,255,255,.12);background:#0b0e19;color:var(--text);padding:9px 12px;border-radius:12px;cursor:pointer;font-weight:700}
+    .btn.primary{border-color:transparent;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#061016}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:6px 10px;font-weight:600}
+    .tabs{display:flex;gap:6px;overflow:auto;padding:6px 16px}
+    .tab{padding:8px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);color:var(--muted);cursor:pointer;background:transparent}
+    .tab.active{background:linear-gradient(135deg,rgba(123,134,255,.16),rgba(0,230,177,.14));color:var(--text);border-color:rgba(255,255,255,.18)}
+    .grid{display:grid;gap:14px}
+    @media(min-width:960px){.grid{grid-template-columns:1.2fr .8fr}}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px}
+    .card h3{margin:0 0 8px;font-size:16px}
+    .muted{color:var(--muted)}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input[type="text"],select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#0b0f1b;color:var(--text);outline:none}
+    textarea{min-height:80px}
+    .row{display:grid;gap:10px}
+    @media(min-width:640px){.row{grid-template-columns:repeat(2,1fr)}}
+    .badge{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08)}
+    .pill{padding:6px 10px;border-radius:999px;font-size:12px}
+    .pill.pending{background:rgba(255,214,90,.18);color:#ffe38c}
+    .pill.live{background:rgba(21,209,138,.18);color:#8dffd4}
+    .pill.rejected{background:rgba(255,108,134,.18);color:#ffb3c0}
+    .list{display:grid;gap:10px}
+    .item{display:grid;gap:10px;border:1px solid rgba(255,255,255,.06);background:#0b0f1b;border-radius:16px;padding:12px}
+    @media(min-width:840px){.item{grid-template-columns:1fr auto}}
+    .meta{display:grid;gap:6px}
+    .ad-preview{border:1px solid rgba(255,255,255,.08);background:#0a0d16;border-radius:14px;overflow:hidden}
+    .ad-media{aspect-ratio:16/9;background:#070a12;display:grid;place-items:center}
+    .ad-media img, .ad-media video{max-width:100%;max-height:100%}
+    .ad-body{padding:10px}
+    .checklist{display:grid;gap:8px}
+    .check{display:flex;gap:8px;align-items:flex-start}
+    .check input{margin-top:4px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;font-size:13px}
+    .right{justify-self:end}
+    .hidden{display:none}
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#061016;padding:10px 14px;border-radius:12px;font-weight:800;z-index:99}
+    .ring{box-shadow:0 0 0 4px rgba(123,134,255,.25)}
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:10px 0}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner container">
+      <div class="brand"><span class="dot"></span> BROMO Admin — Ad Approval</div>
+      <div class="actions">
+        <button class="btn ghost" id="seedBtn">+ Load Demo Pending</button>
+        <button class="btn primary" id="exportBtn">Export Audit Log</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="pending">Pending Review</button>
+      <button class="tab" data-tab="policy">Policy Rules</button>
+      <button class="tab" data-tab="audit">Audit Log</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+  </header>  <main class="container" style="padding-top:14px">
+    <!-- Pending Review -->
+    <section id="tab-pending" class="tab-panel">
+      <div class="card">
+        <div class="toolbar">
+          <input id="q" type="text" placeholder="Search by name, location, advertiser…">
+          <select id="statusFilter">
+            <option value="pending">Pending</option>
+            <option value="needsfix">Needs Fix</option>
+            <option value="all">All</option>
+          </select>
+          <select id="sortBy">
+            <option value="date">Newest</option>
+            <option value="budget">Budget High→Low</option>
+            <option value="name">Name A→Z</option>
+          </select>
+          <div class="right">
+            <button class="btn small" id="bulkApprove">Approve Selected</button>
+            <button class="btn small" id="bulkReject">Reject Selected</button>
+          </div>
+        </div>
+      </div><div class="list" id="pendingList" style="margin-top:12px"></div>
+</section>
+
+<!-- Policy Rules -->
+<section id="tab-policy" class="tab-panel hidden">
+  <div class="grid">
+    <div class="card">
+      <h3>Quick Checklist</h3>
+      <div class="checklist">
+        <label class="check"><input type="checkbox" checked> No prohibited content (adult, weapons, drugs, hate)</label>
+        <label class="check"><input type="checkbox" checked> Landing page works and matches offer</label>
+        <label class="check"><input type="checkbox" checked> Claims are truthful (no scam/MLM)</label>
+        <label class="check"><input type="checkbox" checked> Targeting not discriminatory/sensitive</label>
+        <label class="check"><input type="checkbox" checked> Media quality OK (no misleading edits)</label>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Escalation Matrix</h3>
+      <p class="muted">High-risk ads → manual senior approval; repeat violators → account suspension; illegal content → law enforcement as per T&amp;C.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Audit Log -->
+<section id="tab-audit" class="tab-panel hidden">
+  <div class="card">
+    <h3>Decisions</h3>
+    <table class="table" id="auditTable">
+      <thead>
+        <tr>
+          <th>Time</th><th>Campaign</th><th>Action</th><th>Reviewer</th><th>Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Settings -->
+<section id="tab-settings" class="tab-panel hidden">
+  <div class="card">
+    <h3>Reviewer Profile</h3>
+    <div class="row">
+      <div>
+        <label>Name</label>
+        <input id="revName" type="text" placeholder="Admin #1">
+      </div>
+      <div>
+        <label>Role</label>
+        <select id="revRole"><option>Moderator</option><option>Senior Moderator</option><option>Policy Lead</option></select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div>
+        <label>Auto-approve budget ≤ (₹)</label>
+        <input id="autoBudget" type="number" value="0">
+      </div>
+      <div>
+        <label>Require landing page screenshot</label>
+        <select id="reqSS"><option>No</option><option>Yes</option></select>
+      </div>
+    </div>
+    <div style="margin-top:10px" class="actions">
+      <button class="btn primary" id="saveSettings">Save</button>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+
+  </main>  <template id="itemTpl">
+    <div class="item">
+      <div class="meta">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="checkbox" class="sel">
+          <strong class="name">Campaign Name</strong>
+          <span class="pill pending status">Pending</span>
+          <span class="badge budget">₹0 × 0d</span>
+          <span class="badge target">—</span>
+        </div>
+        <div class="ad-preview">
+          <div class="ad-media mediaBox"><span class="muted">No media provided</span></div>
+          <div class="ad-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div>
+                <div class="headline">Headline here</div>
+                <div class="muted desc">Description here…</div>
+              </div>
+              <span class="badge cta">CTA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;gap:8px;align-content:start">
+        <div class="row">
+          <button class="btn small primary approveBtn">Approve</button>
+          <button class="btn small ghost rejectBtn">Reject</button>
+        </div>
+        <textarea class="notes" placeholder="Notes to advertiser (optional)"></textarea>
+        <details>
+          <summary>View full details</summary>
+          <div class="hr"></div>
+          <div class="row">
+            <div>
+              <div class="muted">Objective</div>
+              <div class="obj">—</div>
+            </div>
+            <div>
+              <div class="muted">Bidding</div>
+              <div class="bid">—</div>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="muted">Location</div>
+              <div class="loc">—</div>
+            </div>
+            <div>
+              <div class="muted">Age/Gender</div>
+              <div class="age">—</div>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="muted">Dates</div>
+              <div class="dates">—</div>
+            </div>
+            <div>
+              <div class="muted">Interests</div>
+              <div class="ints">—</div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </template>  <script>
+    // ===== Shared storage with Store Owner demo =====
+    const KEY='bromo_store_ads_v1';
+    const S = JSON.parse(localStorage.getItem(KEY)||'{}');
+    const state = Object.assign({
+      walletINR: S.walletINR||0,
+      walletCoins: S.walletCoins||0,
+      campaigns: S.campaigns||[],
+      audit: S.audit||[],
+      settings: S.settings||{revName:'Admin',revRole:'Moderator',autoBudget:0,reqSS:'No'}
+    },{});
+    const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+
+    // ===== UI helpers =====
+    const $=s=>document.querySelector(s);
+    const $$=s=>Array.from(document.querySelectorAll(s));
+    const toast=(msg)=>{const t=$('#toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),1500)}
+    const fmt=n=>Number(n||0).toLocaleString('en-IN');
+
+    // ===== Tabs =====
+    $$('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+      $$('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      $$('.tab-panel').forEach(p=>p.classList.add('hidden'));
+      $('#tab-'+btn.dataset.tab).classList.remove('hidden');
+      if(btn.dataset.tab==='audit') renderAudit();
+    }));
+
+    // ===== Seed demo pending =====
+    $('#seedBtn').addEventListener('click',()=>{
+      const today = new Date().toISOString().slice(0,10);
+      const mk=(i)=>({
+        name:`Diwali Flash ${i}`,
+        objective:'coupon',cta:'Get 20% Off',headline:`Mega Offer ${i}`,
+        desc:'Limited time deal at BROMO partner store.',dest:'',
+        locType:'pincode',location:'411021',radius:3,age:[18,45],gender:'all',
+        interests:['grocery','food'],daily:500,days:7,start:today,end:today,
+        bid:'cpc',maxBid:6,status:'Pending',stats:{impr:0,clicks:0}
+      });
+      state.campaigns.push(mk(1),mk(2),mk(3));
+      save(); renderPending(); toast('Demo campaigns added');
+    });
+
+    // ===== Render pending list =====
+    const list = $('#pendingList');
+    function renderPending(){
+      const q = $('#q').value.toLowerCase();
+      const filt = $('#statusFilter').value;
+      const sorted = state.campaigns
+        .map((c,idx)=>({...c,_idx:idx}))
+        .filter(c=>{
+          const m1 = !q || (c.name?.toLowerCase().includes(q) || c.location?.toLowerCase().includes(q));
+          const m2 = (filt==='all') || (filt==='needsfix' ? c.status==='Needs Fix' : c.status==='Pending');
+          return m1 && m2;
+        });
+      const sortBy = $('#sortBy').value;
+      sorted.sort((a,b)=>{
+        if(sortBy==='budget') return (b.daily*b.days)-(a.daily*a.days);
+        if(sortBy==='name') return (a.name||'').localeCompare(b.name||'');
+        return b._idx-a._idx;// newest
+      });
+
+      list.innerHTML='';
+      sorted.forEach(c=>list.appendChild(renderItem(c)));
+    }
+
+    function renderItem(c){
+      const tpl = $('#itemTpl').content.cloneNode(true);
+      const root = tpl.querySelector('.item');
+      root.dataset.idx=c._idx;
+      root.querySelector('.name').textContent = c.name||'Untitled';
+      const statusEl = root.querySelector('.status');
+      statusEl.textContent = c.status;
+      statusEl.className = 'pill status '+(c.status==='Pending'?'pending':c.status==='Rejected'?'rejected':'live');
+      root.querySelector('.budget').textContent = `₹${fmt(c.daily)} × ${c.days}d`;
+      root.querySelector('.target').textContent = `${c.locType}:${c.location} · ${c.radius}km`;
+      root.querySelector('.headline').textContent = c.headline||'—';
+      root.querySelector('.desc').textContent = c.desc||'—';
+      root.querySelector('.cta').textContent = c.cta||'CTA';
+      root.querySelector('.obj').textContent = c.objective;
+      root.querySelector('.bid').textContent = `${c.bid} • max ₹${fmt(c.maxBid)}`;
+      root.querySelector('.loc').textContent = `${c.locType}:${c.location} (${c.radius}km)`;
+      root.querySelector('.age').textContent = `${c.age?.[0]}–${c.age?.[1]} • ${c.gender}`;
+      root.querySelector('.dates').textContent = `${c.start} → ${c.end}`;
+      root.querySelector('.ints').textContent = (c.interests||[]).join(', ')||'—';
+
+      // media preview placeholder (since media file blob isn't persisted across sessions)
+      root.querySelector('.mediaBox').innerHTML = '<span class="muted">Media preview unavailable in admin (blob not persisted)</span>';
+
+      // actions
+      root.querySelector('.approveBtn').addEventListener('click',()=>approve(c._idx, root.querySelector('.notes').value));
+      root.querySelector('.rejectBtn').addEventListener('click',()=>reject(c._idx, root.querySelector('.notes').value));
+      return root;
+    }
+
+    // ===== Approve / Reject / Bulk =====
+    function approve(idx, notes=''){
+      const c = state.campaigns[idx]; if(!c) return;
+      // optional auto-approve logic based on budget
+      const budget = (c.daily||0)*(c.days||0);
+      if(state.settings.autoBudget>0 && budget<=state.settings.autoBudget){/* already allowed */}
+      c.status='Live';
+      pushAudit(c.name,'Approved',notes);
+      save(); renderPending(); toast('Approved');
+    }
+    function reject(idx, notes=''){
+      const c = state.campaigns[idx]; if(!c) return;
+      c.status='Rejected';
+      pushAudit(c.name,'Rejected',notes||'Policy violation');
+      save(); renderPending(); toast('Rejected');
+    }
+
+    $('#bulkApprove').addEventListener('click',()=>{
+      $$('#pendingList .item').forEach(it=>{
+        const cb = it.querySelector('.sel');
+        if(cb.checked){ approve(+it.dataset.idx, 'Bulk approved'); }
+      });
+    });
+    $('#bulkReject').addEventListener('click',()=>{
+      $$('#pendingList .item').forEach(it=>{
+        const cb = it.querySelector('.sel');
+        if(cb.checked){ reject(+it.dataset.idx, 'Bulk rejected'); }
+      });
+    });
+
+    // ===== Filters =====
+    $('#q').addEventListener('input',()=>{renderPending();$('#q').classList.add('ring');setTimeout(()=>$('#q').classList.remove('ring'),300)});
+    $('#statusFilter').addEventListener('change',renderPending);
+    $('#sortBy').addEventListener('change',renderPending);
+
+    // ===== Audit =====
+    function pushAudit(name,action,notes=''){
+      const rec = {t:new Date().toISOString(),name,action,by:state.settings.revName||'Admin',role:state.settings.revRole||'Moderator',notes};
+      state.audit = state.audit||[]; state.audit.push(rec);
+    }
+    function renderAudit(){
+      const tb = $('#auditTable tbody');
+      tb.innerHTML = '';
+      (state.audit||[]).slice().reverse().forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${new Date(r.t).toLocaleString()}</td><td>${esc(r.name)}</td><td>${r.action}</td><td>${esc(r.by)} (${esc(r.role)})</td><td>${esc(r.notes||'')}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    // ===== Settings =====
+    function loadSettings(){
+      $('#revName').value = state.settings.revName||'Admin';
+      $('#revRole').value = state.settings.revRole||'Moderator';
+      $('#autoBudget').value = state.settings.autoBudget||0;
+      $('#reqSS').value = state.settings.reqSS||'No';
+    }
+    $('#saveSettings').addEventListener('click',()=>{
+      state.settings.revName = $('#revName').value.trim()||'Admin';
+      state.settings.revRole = $('#revRole').value;
+      state.settings.autoBudget = +$('#autoBudget').value||0;
+      state.settings.reqSS = $('#reqSS').value; save(); toast('Settings saved');
+    });
+
+    // ===== Export Audit =====
+    $('#exportBtn').addEventListener('click',()=>{
+      const blob = new Blob([JSON.stringify(state.audit||[],null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download = 'bromo_audit_log.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // ===== Utils =====
+    const esc = (s)=>String(s||'').replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+    // ===== Init =====
+    function init(){
+      loadSettings();
+      renderPending();
+      renderAudit();
+    }
+    init();
+  </script>
+</body></html>

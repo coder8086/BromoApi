@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BROMO — Store Owner Ads Dashboard</title>
+  <style>
+    :root{
+      --bg:#0f1220;--card:#171a2b;--muted:#8b90a9;--text:#e9ecf1;--brand:#6c7bff;--brand-2:#00e5a8;--danger:#ff5d78;--ok:#00d17a;--ring:rgba(108,123,255,.35)
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,rgba(108,123,255,.08),transparent),radial-gradient(1000px 500px at -20% 110%,rgba(0,229,168,.08),transparent),var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
+    a{color:inherit}
+    .container{max-width:1100px;margin:0 auto;padding:16px}
+    .nav{position:sticky;top:0;z-index:10;background:rgba(15,18,32,.72);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav-inner{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px}
+    .brand .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .tabs{display:flex;gap:6px;overflow:auto;padding:6px}
+    .tab{padding:8px 12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,.08);color:var(--muted);cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,rgba(108,123,255,.16),rgba(0,229,168,.14));border-color:rgba(255,255,255,.18);color:var(--text)}
+    .grid{display:grid;gap:14px}
+    @media(min-width:900px){.grid{grid-template-columns:1.35fr .65fr}}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px}
+    .card h3{margin:0 0 8px;font-size:16px}
+    .muted{color:var(--muted)}
+    label{display:block;font-size:13px;margin:10px 0 6px}
+    input[type="text"],input[type="number"],input[type="date"],input[type="time"],textarea,select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0c0f1b;color:var(--text);outline:none}
+    textarea{min-height:72px;resize:vertical}
+    .row{display:grid;gap:10px}
+    @media(min-width:640px){.row{grid-template-columns:repeat(2,1fr)}}
+    .row-3{display:grid;gap:10px}
+    @media(min-width:780px){.row-3{grid-template-columns:repeat(3,1fr)}}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:8px 10px;border-radius:999px;border:1px dashed rgba(255,255,255,.15);font-size:12px;cursor:pointer}
+    .chip.active{background:rgba(108,123,255,.18);border-style:solid}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{appearance:none;border:0;cursor:pointer;border-radius:12px;padding:10px 14px;font-weight:600}
+    .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#061016}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text)}
+    .stat{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:#0c0f1b;border:1px solid rgba(255,255,255,.06)}
+    .ad-preview{background:#0c0f1b;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+    .ad-media{aspect-ratio:16/9;background:#080a12;display:grid;place-items:center}
+    .ad-media img{max-width:100%;max-height:100%}
+    .ad-body{padding:12px}
+    .tag{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08)}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;font-size:13px}
+    .pill{padding:6px 10px;border-radius:999px;font-size:12px}
+    .pill.live{background:rgba(0,209,122,.18);color:#62ffca}
+    .pill.pending{background:rgba(255,221,87,.18);color:#ffe97a}
+    .pill.paused{background:rgba(255,93,120,.18);color:#ffb5c2}
+    .ring{box-shadow:0 0 0 4px var(--ring)}
+    .hidden{display:none}
+    .footer{padding:20px 0;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner container">
+      <div class="brand"><span class="dot"></span> BROMO Ads — Store Owner</div>
+      <div class="actions">
+        <span class="tag" id="walletTag">Wallet: ₹0 / 0 BROMO</span>
+        <button class="btn btn-ghost" id="addFundsBtn">+ Add Funds</button>
+        <button class="btn btn-primary" id="saveDraftBtn">Save Draft</button>
+      </div>
+    </div>
+    <div class="tabs container" id="tabs">
+      <button class="tab active" data-tab="create">Create Campaign</button>
+      <button class="tab" data-tab="campaigns">My Campaigns</button>
+      <button class="tab" data-tab="wallet">Wallet &amp; Billing</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:14px">
+    <!-- Create Campaign -->
+    <section id="tab-create" class="tab-panel">
+      <div class="grid">
+        <div class="card">
+          <h3>Campaign Details</h3>
+          <p class="muted" style="margin-top:-4px">Define what you want to promote and how it should look.</p>
+
+          <label>Campaign Name</label>
+          <input id="campaignName" type="text" placeholder="Diwali Mega Sale — Pashan Store">
+
+          <div class="row">
+            <div>
+              <label>Objective</label>
+              <select id="objective">
+                <option value="traffic">Store Visits / Traffic</option>
+                <option value="engagement">Engagement</option>
+                <option value="coupon">Discount Redemption</option>
+                <option value="video">Video Views</option>
+              </select>
+            </div>
+            <div>
+              <label>CTA Button Label</label>
+              <input id="cta" type="text" placeholder="Get 20% Off">
+            </div>
+          </div>
+
+          <label>Headline</label>
+          <input id="headline" type="text" maxlength="60" placeholder="Flat 20% OFF on all bakery items">
+
+          <label>Description</label>
+          <textarea id="desc" maxlength="140" placeholder="Limited time offer at BROMO Mart, Pashan. Use code BROMO20 at checkout."></textarea>
+
+          <div class="row">
+            <div>
+              <label>Media (Image/Video)</label>
+              <input id="media" type="file" accept="image/*,video/*">
+            </div>
+            <div>
+              <label>Destination Link (optional)</label>
+              <input id="dest" type="text" placeholder="https://yourstore.example/diwali">
+            </div>
+          </div>
+        </div>
+
+        <aside class="card">
+          <h3>Live Preview</h3>
+          <div class="ad-preview" id="preview">
+            <div class="ad-media"><span class="muted">Upload media to preview</span></div>
+            <div class="ad-body">
+              <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+                <strong id="p-head">Your Headline Here</strong>
+                <span class="tag" id="p-cta">CTA</span>
+              </div>
+              <p id="p-desc" class="muted" style="margin:6px 0 0">Your description will appear here. Keep it short and catchy.</p>
+            </div>
+          </div>
+
+          <div style="height:10px"></div>
+          <div class="stat"><span>Estimated Reach (7 days)</span><strong id="reach">0 - 0</strong></div>
+          <div class="stat"><span>Est. Daily Impressions</span><strong id="impressions">0</strong></div>
+          <div class="stat"><span>Est. Clicks (CTR 1.5%)</span><strong id="clicks">0</strong></div>
+        </aside>
+      </div>
+
+      <div class="grid" style="margin-top:14px">
+        <div class="card">
+          <h3>Target Audience</h3>
+          <div class="row-3">
+            <div>
+              <label>Location Type</label>
+              <select id="locType">
+                <option value="pincode">Pincode</option>
+                <option value="city">City</option>
+                <option value="radius">GPS Radius</option>
+                <option value="mall">Mall/Complex</option>
+              </select>
+            </div>
+            <div>
+              <label>Location</label>
+              <input id="location" type="text" placeholder="411021 / Pune / Pashan">
+            </div>
+            <div>
+              <label>Radius (km)</label>
+              <input id="radius" type="number" min="1" max="25" value="3">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Age Range</label>
+              <div class="row" style="grid-template-columns:1fr 1fr">
+                <input id="ageMin" type="number" min="13" max="65" value="18">
+                <input id="ageMax" type="number" min="18" max="75" value="45">
+              </div>
+            </div>
+            <div>
+              <label>Gender</label>
+              <div class="chips">
+                <span class="chip active" data-g="all">All</span>
+                <span class="chip" data-g="male">Male</span>
+                <span class="chip" data-g="female">Female</span>
+              </div>
+            </div>
+          </div>
+
+          <label>Interests</label>
+          <div class="chips" id="interests">
+            <span class="chip" data-i="food">Foodies</span>
+            <span class="chip" data-i="fashion">Fashion</span>
+            <span class="chip" data-i="electronics">Electronics</span>
+            <span class="chip" data-i="fitness">Fitness</span>
+            <span class="chip" data-i="grocery">Grocery</span>
+            <span class="chip" data-i="beauty">Beauty</span>
+            <span class="chip" data-i="kids">Kids</span>
+            <span class="chip" data-i="home">Home &amp; Living</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Budget &amp; Schedule</h3>
+          <div class="row">
+            <div>
+              <label>Daily Budget (₹)</label>
+              <input id="daily" type="number" min="50" value="500">
+            </div>
+            <div>
+              <label>Total Days</label>
+              <input id="days" type="number" min="1" value="7">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Start Date</label>
+              <input id="start" type="date">
+            </div>
+            <div>
+              <label>End Date</label>
+              <input id="end" type="date">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Bidding</label>
+              <select id="bid">
+                <option value="cpc">CPC (Cost per Click)</option>
+                <option value="cpm">CPM (Cost per 1000 Impr.)</option>
+              </select>
+            </div>
+            <div>
+              <label>Max Bid (₹)</label>
+              <input id="maxBid" type="number" min="1" value="6">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-ghost" id="estimateBtn">Estimate Reach</button>
+            <button class="btn btn-primary" id="launchBtn">Launch Campaign</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Campaigns -->
+    <section id="tab-campaigns" class="tab-panel hidden">
+      <div class="card">
+        <h3>My Campaigns</h3>
+        <table class="table" id="campTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Budget</th>
+              <th>Impr.</th>
+              <th>Clicks</th>
+              <th>CTR</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Wallet -->
+    <section id="tab-wallet" class="tab-panel hidden">
+      <div class="grid">
+        <div class="card">
+          <h3>Wallet</h3>
+          <div class="stat"><span>INR Balance</span><strong id="inrBal">₹0</strong></div>
+          <div class="stat"><span>BROMO Coins</span><strong id="coinBal">0</strong></div>
+          <div style="height:10px"></div>
+          <label>Add INR</label>
+          <div class="row">
+            <input id="addInr" type="number" min="100" value="1000">
+            <button class="btn btn-primary" id="addInrBtn">Add Money</button>
+          </div>
+          <p class="muted" style="margin-top:8px">(Demo only) Funds are stored in localStorage.</p>
+        </div>
+        <div class="card">
+          <h3>Billing Summary</h3>
+          <div class="stat"><span>Total Spend</span><strong id="totalSpend">₹0</strong></div>
+          <div class="stat"><span>Active Campaigns</span><strong id="activeCount">0</strong></div>
+          <div class="stat"><span>Coins Burned</span><strong id="coinsBurned">0</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="tab-settings" class="tab-panel hidden">
+      <div class="card">
+        <h3>Store Profile</h3>
+        <div class="row">
+          <div>
+            <label>Store Name</label>
+            <input id="storeName" type="text" placeholder="BROMO Mart — Pashan">
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="storeCat">
+              <option>Grocery</option>
+              <option>Restaurant</option>
+              <option>Fashion</option>
+              <option>Electronics</option>
+            </select>
+          </div>
+        </div>
+        <label>Contact Number</label>
+        <input id="storePhone" type="text" placeholder="98765 43210">
+        <div class="actions" style="margin-top:8px">
+          <button class="btn btn-primary" id="saveStoreBtn">Save Settings</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">BROMO Ads (Demo UI) — Build once, use in app/web. © 2025</div>
+  </main>
+
+  <script>
+    // ======== Simple State (localStorage backed) =========
+    const S = JSON.parse(localStorage.getItem('bromo_store_ads_v1')||'{}');
+    const state = Object.assign({
+      walletINR: S.walletINR ?? 0,
+      walletCoins: S.walletCoins ?? 0,
+      campaigns: S.campaigns ?? [],
+      totalSpend: S.totalSpend ?? 0,
+      coinsBurned: S.coinsBurned ?? 0,
+      store: S.store ?? {name:'',cat:'Grocery',phone:''}
+    },{});
+    const save = ()=>localStorage.setItem('bromo_store_ads_v1',JSON.stringify(state));
+
+    // ======== Elements =========
+    const el = (id)=>document.getElementById(id);
+    const walletTag = el('walletTag');
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.addEventListener('click',()=>{
+        document.querySelectorAll('.tab').forEach(a=>a.classList.remove('active'));
+        t.classList.add('active');
+        const key = t.dataset.tab;
+        document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+        el('tab-'+key).classList.remove('hidden');
+        if(key==='campaigns') renderTable();
+        if(key==='wallet') syncWalletUI();
+      });
+    });
+
+    // ======== Chips (Gender & Interests) =========
+    let gender = 'all';
+    document.querySelectorAll('[data-g]').forEach(ch=>{
+      ch.addEventListener('click',()=>{
+        document.querySelectorAll('[data-g]').forEach(x=>x.classList.remove('active'));
+        ch.classList.add('active');
+        gender = ch.dataset.g;
+        quickEstimate();
+      });
+    });
+
+    const interestSet = new Set();
+    document.querySelectorAll('#interests .chip').forEach(ch=>{
+      ch.addEventListener('click',()=>{
+        const key = ch.dataset.i;
+        if(interestSet.has(key)){ interestSet.delete(key); ch.classList.remove('active'); }
+        else { interestSet.add(key); ch.classList.add('active'); }
+        quickEstimate();
+      })
+    })
+
+    // ======== Preview binding =========
+    const bind = (src, target, fn=(v)=>v||'')=> src.addEventListener('input',()=>{
+      target.textContent = fn(src.value);
+    });
+    bind(el('headline'), el('p-head'), v=>v||'Your Headline Here');
+    bind(el('desc'), el('p-desc'), v=>v||'Your description will appear here. Keep it short and catchy.');
+    bind(el('cta'), el('p-cta'), v=>v||'CTA');
+
+    el('media').addEventListener('change', (e)=>{
+      const file = e.target.files?.[0];
+      const mediaBox = document.querySelector('#preview .ad-media');
+      if(!file){ mediaBox.innerHTML = '<span class="muted">Upload media to preview</span>'; return; }
+      if(file.type.startsWith('image/')){
+        const url = URL.createObjectURL(file);
+        mediaBox.innerHTML = `<img alt="ad" src="${url}"/>`;
+      } else {
+        const url = URL.createObjectURL(file);
+        mediaBox.innerHTML = `<video src="${url}" controls style="width:100%;height:100%"></video>`;
+      }
+    });
+
+    // ======== Estimator =========
+    const reachEl = el('reach'), impEl = el('impressions'), clkEl = el('clicks');
+    function estimate(){
+      const daily = +el('daily').value||0;
+      const days = +el('days').value||0;
+      const budget = daily*days;
+      // Very rough model: CPM ~ ₹60; CTR 1.5%; targeting narrowness factor
+      const cpm = 60 * (gender==='all'?1:1.1) * (Math.max(1, interestSet.size)*0.95);
+      const imps = Math.floor((budget/cpm)*1000);
+      const clicks = Math.floor(imps*0.015);
+      const low = Math.floor(imps*0.7), high = Math.floor(imps*1.1);
+      reachEl.textContent = `${fmt(low)} - ${fmt(high)}`;
+      impEl.textContent = fmt(imps);
+      clkEl.textContent = fmt(clicks);
+    }
+    function quickEstimate(){ setTimeout(estimate, 50); }
+    document.querySelectorAll('#daily,#days,#maxBid,#ageMin,#ageMax,#radius,#locType,#location').forEach(i=>i.addEventListener('input',quickEstimate));
+    el('estimateBtn').addEventListener('click', estimate);
+
+    // ======== Wallet =========
+    function syncWalletUI(){
+      el('inrBal').textContent = '₹'+state.walletINR;
+      el('coinBal').textContent = state.walletCoins;
+      el('totalSpend').textContent = '₹'+state.totalSpend;
+      el('activeCount').textContent = state.campaigns.filter(c=>c.status==='Live').length;
+      el('coinsBurned').textContent = state.coinsBurned;
+      walletTag.textContent = `Wallet: ₹${state.walletINR} / ${state.walletCoins} BROMO`;
+    }
+    el('addFundsBtn').addEventListener('click',()=>{
+      document.querySelector('[data-tab="wallet"]').click();
+    });
+    el('addInrBtn').addEventListener('click',()=>{
+      const amt = +el('addInr').value||0; if(amt<=0) return;
+      state.walletINR += amt; save(); syncWalletUI();
+      el('addInr').classList.add('ring'); setTimeout(()=>el('addInr').classList.remove('ring'),400);
+    });
+
+    // ======== Launch / Draft =========
+    function collectForm(){
+      return {
+        name: el('campaignName').value.trim()||'Untitled Campaign',
+        objective: el('objective').value,
+        cta: el('cta').value.trim()||'Learn more',
+        headline: el('headline').value.trim(),
+        desc: el('desc').value.trim(),
+        dest: el('dest').value.trim(),
+        locType: el('locType').value,
+        location: el('location').value.trim(),
+        radius: +el('radius').value||3,
+        age:[+el('ageMin').value||18, +el('ageMax').value||45],
+        gender,
+        interests:[...interestSet],
+        daily:+el('daily').value||0,
+        days:+el('days').value||0,
+        start: el('start').value,
+        end: el('end').value,
+        bid: el('bid').value,
+        maxBid:+el('maxBid').value||6,
+        status:'Pending',
+        stats:{impr:0,clicks:0}
+      };
+    }
+
+    function validate(c){
+      const errs = [];
+      if(!c.headline) errs.push('Headline required');
+      if(!c.desc) errs.push('Description required');
+      if(c.daily<50) errs.push('Daily budget must be ≥ ₹50');
+      if(c.days<1) errs.push('Total days must be ≥ 1');
+      if(!c.start||!c.end) errs.push('Start/End date required');
+      if(new Date(c.end) < new Date(c.start)) errs.push('End date must be after Start date');
+      return errs;
+    }
+
+    el('saveDraftBtn').addEventListener('click',()=>{
+      const c = collectForm();
+      c.status='Draft';
+      state.campaigns.push(c); save();
+      toast('Draft saved');
+    });
+
+    el('launchBtn').addEventListener('click',()=>{
+      const c = collectForm();
+      const errs = validate(c);
+      if(errs.length){ alert('Fix the following:\n- '+errs.join('\n- ')); return; }
+      const spend = c.daily*c.days;
+      if(state.walletINR<spend){
+        if(confirm('Insufficient wallet balance. Add funds now?')){
+          document.querySelector('[data-tab="wallet"]').click();
+        }
+        return;
+      }
+      state.walletINR -= spend; state.totalSpend += spend; c.status='Live';
+      state.campaigns.push(c); save(); syncWalletUI(); renderTable();
+      document.querySelector('[data-tab="campaigns"]').click();
+      toast('Campaign launched');
+    });
+
+    // ======== Campaigns Table =========
+    function renderTable(){
+      const tb = document.querySelector('#campTable tbody');
+      tb.innerHTML='';
+      state.campaigns.slice().reverse().forEach((c,idx)=>{
+        const tr = document.createElement('tr');
+        const ctr = (c.stats.impr?((c.stats.clicks/c.stats.impr)*100):0).toFixed(2)+'%';
+        tr.innerHTML = `
+          <td>${esc(c.name)}</td>
+          <td><span class="pill ${c.status==='Live'?'live':c.status==='Pending'?'pending':'paused'}">${c.status}</span></td>
+          <td>₹${c.daily} × ${c.days}d</td>
+          <td>${fmt(c.stats.impr)}</td>
+          <td>${fmt(c.stats.clicks)}</td>
+          <td>${ctr}</td>
+          <td>
+            <button class="btn btn-ghost" data-act="pause">${c.status==='Live'?'Pause':'Resume'}</button>
+            <button class="btn btn-ghost" data-act="boost">Boost</button>
+          </td>`;
+        tr.querySelector('[data-act="pause"]').addEventListener('click',()=>{
+          c.status = c.status==='Live'?'Paused':'Live'; save(); renderTable(); syncWalletUI();
+        });
+        tr.querySelector('[data-act="boost"]').addEventListener('click',()=>{
+          const extra = +prompt('Add extra budget (₹):', '500')||0; if(!extra) return;
+          if(state.walletINR<extra){ alert('Not enough wallet balance.'); return; }
+          state.walletINR -= extra; state.totalSpend += extra; save(); syncWalletUI(); toast('Boost added');
+        });
+        tb.appendChild(tr);
+      });
+    }
+
+    // ======== Utils =========
+    const fmt = (n)=>n.toLocaleString('en-IN');
+    const esc = (s)=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    function toast(msg){
+      const t = document.createElement('div');
+      t.textContent = msg;
+      Object.assign(t.style,{position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,var(--brand),var(--brand-2))',color:'#061016',padding:'10px 14px',borderRadius:'12px',fontWeight:'700',zIndex:99});
+      document.body.appendChild(t); setTimeout(()=>t.remove(),1700);
+    }
+
+    // ======== Settings Prefill =========
+    el('saveStoreBtn').addEventListener('click',()=>{
+      state.store.name = el('storeName').value;
+      state.store.cat = el('storeCat').value;
+      state.store.phone = el('storePhone').value; save(); toast('Settings saved');
+    });
+
+    // ======== Init =========
+    (function init(){
+      // set dates default
+      const today = new Date();
+      const toISO = (d)=>d.toISOString().slice(0,10);
+      el('start').value = toISO(today);
+      const end = new Date(today.getTime()+6*24*3600*1000); el('end').value = toISO(end);
+      // store prefill
+      el('storeName').value = state.store.name||'';
+      el('storeCat').value = state.store.cat||'Grocery';
+      el('storePhone').value = state.store.phone||'';
+      syncWalletUI(); renderTable(); estimate();
+    })();
+  </script>
+
+</body></html>

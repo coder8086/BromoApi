@@ -8,11 +8,13 @@ const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes")
 const postRoutes = require("./routes/postRoutes")
 const commentRoutes = require("./routes/commentRoutes")
+const compagainRoutes = require("./routes/campaignRoutes")
 
 
 const sequelize = require("./config/db");
 
 const path = require("path");
+const { title } = require("process");
 
 // Import models to sync relations
 require("./models/user");
@@ -27,12 +29,23 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+app.set("view engine", "ejs");
+
+app.get("/", (req,res)=>{
+  res.render("index", {title: "My First EJS Page", message : "Hello from EJS !"});
+});
+
+app.get("/storeAdmin", (req,res)=>{
+  res.render("storeAdmin", {title: "Store admin ejs page", message:"hjhjkh"})
+});
+
 // Routes
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/profile", profileRoutes);
 app.use("/post", postRoutes);
 app.use("/comment", commentRoutes);
+app.use("/compagain", compagainRoutes)
 
 
 app.get('/test',(req,res)=>{
